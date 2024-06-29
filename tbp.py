@@ -3,15 +3,26 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 G = 1 # gravity constant
+m1 = 1
+m2 = 1
+m3 = 1
 
-def rk4(f, y_prev, t, h):
-    k1 = h * f(t, y_prev)
-    k2 = h * f(t + 0.5 * h, y_prev + 0.5 * k1)
-    k3 = h * f(t + 0.5 * h, y_prev + 0.5 * k2)
-    k4 = h * f(t + h, y_prev + k3)
+def rk4(f, y_prev, h):
+    k1 = h * f(y_prev)
+    k2 = h * f(y_prev + 0.5 * k1)
+    k3 = h * f(y_prev + 0.5 * k2)
+    k4 = h * f(y_prev + k3)
     return y_prev + (k1 + 2 * k2 + 2 * k3 + k4) / 6
+    
+def rk4_3_8(f, y_prev, h):
+    k1 = f(y_prev)
+    k2 = f(y_prev + h/3 * k1)
+    k3 = f(y_prev - h/3 * k1 + h*k2)
+    k4 = f(y_prev + h * k1 - h * k2 + h * k3)
 
-def equations_of_motion(t, y):
+    return y_prev + h/8 * (k1 + 3*k2 + 3*k3 + k4)
+
+def equations_of_motion(y):
     r1, r2, r3 = y[0:2], y[2:4], y[4:6]
     v1, v2, v3 = y[6:8], y[8:10], y[10:12]
 
@@ -25,7 +36,7 @@ def equations_of_motion(t, y):
 
     return np.concatenate((v1, v2, v3, r1_pp, r2_pp, r3_pp))
     
-def equations_of_motion_softened(t, y):
+def equations_of_motion_softened(y):
     r1, r2, r3 = y[0:2], y[2:4], y[4:6]
     v1, v2, v3 = y[6:8], y[8:10], y[10:12]
 
@@ -36,12 +47,12 @@ def equations_of_motion_softened(t, y):
     r23 = r3 - r2
 
     # Accelerations
-    r1_pp = G * (r12 / (np.linalg.norm(r12)**2 + softening**2)**1.5 + 
-                 r13 / (np.linalg.norm(r13)**2 + softening**2)**1.5)
-    r2_pp = G * (-r12 / (np.linalg.norm(r12)**2 + softening**2)**1.5 + 
-                 r23 / (np.linalg.norm(r23)**2 + softening**2)**1.5)
-    r3_pp = G * (-r13 / (np.linalg.norm(r13)**2 + softening**2)**1.5 - 
-                 r23 / (np.linalg.norm(r23)**2 + softening**2)**1.5)
+    r1_pp = G * (m2 * r12 / (np.linalg.norm(r12)**2 + softening**2)**1.5 + 
+                 m3 * r13 / (np.linalg.norm(r13)**2 + softening**2)**1.5)
+    r2_pp = G * (m3 * (-r12) / (np.linalg.norm(r12)**2 + softening**2)**1.5 + 
+                 m1 * r23 / (np.linalg.norm(r23)**2 + softening**2)**1.5)
+    r3_pp = G * (m1 * (-r13) / (np.linalg.norm(r13)**2 + softening**2)**1.5 - 
+                 m2 * r23 / (np.linalg.norm(r23)**2 + softening**2)**1.5)
 
     return np.concatenate((v1, v2, v3, r1_pp, r2_pp, r3_pp))
     
@@ -50,13 +61,13 @@ def calculate_energy(y):
     v1, v2, v3 = y[6:8], y[8:10], y[10:12]
 
     # Kinetic energy
-    KE = 0.5 * (np.dot(v1, v1) + np.dot(v2, v2) + np.dot(v3, v3))
+    KE = 0.5 * (m1 * np.dot(v1, v1) + m2 * np.dot(v2, v2) + m3 * np.dot(v3, v3))
 
     # Potential energy
     r12 = np.linalg.norm(r2 - r1)
     r13 = np.linalg.norm(r3 - r1)
     r23 = np.linalg.norm(r3 - r2)
-    PE = -G * (1/r12 + 1/r13 + 1/r23)
+    PE = -G * (m1 * m2 / r12 + m1 * m3 / r13 + m2 * m3 / r23)
 
     return KE + PE
 
@@ -154,7 +165,7 @@ y[0] = y0
 energy[0] = calculate_energy(y0)
 
 for i in range(1, len(t)):
-    y[i] = rk4(equations_of_motion_softened, y[i-1], t[i-1], dt)
+    y[i] = rk4_3_8(equations_of_motion_softened, y[i-1], dt)
     energy[i] = calculate_energy(y[i])
 
 # Extract positions
