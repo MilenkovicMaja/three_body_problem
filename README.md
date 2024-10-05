@@ -26,7 +26,7 @@ The animation shows:
 - The current positions of the bodies (colored dots)
 - Real-time updates of total energy, positions, and velocities
 
-<p float="left">
+<p float="left" align="center">
   <img src="./examples/example_2.gif" width="45%" />
   <img src="./examples/example_5.gif" width="45%" />
 </p>
